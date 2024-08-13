@@ -1,8 +1,10 @@
 
 import 'package:flutter/material.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:islam/components/colors.dart';
 import 'package:islam/screens/bottom_nav_bat_screens/bearish.dart';
 import 'package:islam/screens/bottom_nav_bat_screens/hadith.dart';
+import 'package:islam/screens/bottom_nav_bat_screens/live_tv.dart';
 import 'package:islam/screens/bottom_nav_bat_screens/praying_time.dart';
 import 'package:islam/screens/bottom_nav_bat_screens/quran.dart';
 import 'package:islam/screens/bottom_nav_bat_screens/radio.dart';
@@ -15,15 +17,7 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  List<Widget> bottomScreens = [
-    Quran(),
-    Hadith(),
-    Bearish(),
-    RadioScreen(),
-    PrayingTime(),
-  ];
   int currentIndex = 0;
-  List<String> titles = ['Chat','Groups','Contacts','Setting'];
   PageController pageController = PageController();
   @override
   Widget build(BuildContext context) {
@@ -47,6 +41,7 @@ class _MainPageState extends State<MainPage> {
             NavigationDestination(icon: ImageIcon(AssetImage('assets/images/bearish.png')), label: 'المسبحة'),
             NavigationDestination(icon: ImageIcon(AssetImage('assets/images/radio.png')), label: 'الإذاعة'),
             NavigationDestination(icon: ImageIcon(AssetImage('assets/images/time.png')), label: 'التوقيت'),
+            NavigationDestination(icon: Icon(Iconsax.video_octagon), label: 'بث مباشر'),
           ],
         ),
         body: PageView(
@@ -62,6 +57,7 @@ class _MainPageState extends State<MainPage> {
             Bearish(),
             RadioScreen(),
             PrayingTime(),
+            LiveTv(),
           ],
         ),
       ),
