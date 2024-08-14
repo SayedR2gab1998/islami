@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:islam/components/colors.dart';
-import 'package:islam/components/components.dart';
+import 'package:islam/http/geo_locator.dart';
 import 'package:islam/http/http_praying_timing_request.dart';
 
 class PrayingTime extends StatefulWidget {
@@ -12,24 +12,29 @@ class PrayingTime extends StatefulWidget {
 }
 
 class _PrayingTimeState extends State<PrayingTime> {
-  String text='';
-  var searchCon = TextEditingController();
-  late Future<Map<String, String>> dates;
+
+   Future<Map<String, String>>? dates;
+
+   Future<Map<String, dynamic>>? prayerTimes;
 
 
-  late Future<Map<String, dynamic>> prayerTimes;
   @override
   void initState() {
     super.initState();
-    dates = PrayerTimeService().fetchHijriDate(searchCon.text,);
-    prayerTimes = PrayerTimeService().fetchPrayerTimes(searchCon.text);
-  }
-  @override
-  void dispose() {
-    searchCon.dispose();
-    super.dispose();
+    _loadPrayerTimes();
   }
 
+  void _loadPrayerTimes() async {
+    try {
+      Position position = await determinePosition();
+      setState(() {
+        prayerTimes = PrayerTimeService().getPrayerTimes(position.latitude, position.longitude);
+        dates = PrayerTimeService().fetchHijriDate(position.latitude, position.longitude);
+      });
+    } catch (e) {
+      print(e);
+    }
+  }
    Map<String, String> prayerNamesInArabic = {
     "Fajr": "الفجر",
     "Dhuhr": "الظهر",
@@ -45,8 +50,6 @@ class _PrayingTimeState extends State<PrayingTime> {
   };
   @override
   Widget build(BuildContext context) {
-    DateTime now = DateTime.now();
-    String formattedDate = DateFormat('yyyy-MM-dd').format(now);
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -66,21 +69,6 @@ class _PrayingTimeState extends State<PrayingTime> {
               children: [
                 SizedBox(height: 60,),
                 Image.asset('assets/images/logo1.png'),
-                SizedBox(height: 20,),
-                defaultTextFormField(
-                  controller: searchCon,
-                  validator: (value)=>value!.isEmpty?'Required':null,
-                  inputType: TextInputType.text,
-                  label: 'مواقيت الصلاه',
-                  prefix: 'assets/images/time.png',
-                  context: context,
-                  onSubmit: (value){
-                    setState(() {
-                      searchCon.text =value;
-                      PrayerTimeService().fetchPrayerTimes(value);
-                    });
-                  }
-                ),
                 SizedBox(height: 10,),
                 FutureBuilder<Map<String,String>>(
                   future: dates,
@@ -119,7 +107,7 @@ class _PrayingTimeState extends State<PrayingTime> {
                               ),
                               Column(
                                 children: [
-                                  Text('التاريج الميلادي',
+                                  Text('التاريج الهجري',
                                     style: TextStyle(
                                         fontSize: 20,
                                         fontFamily: 'Janna',
@@ -145,7 +133,7 @@ class _PrayingTimeState extends State<PrayingTime> {
                     }
                   }
                 ),
-
+                SizedBox(height: 10,),
                 Expanded(
                   child: FutureBuilder<Map<String,dynamic>>(
                     future: prayerTimes,
@@ -156,70 +144,57 @@ class _PrayingTimeState extends State<PrayingTime> {
                         return Center(child: Text('Error: ${snapshot.error}'));
                       }
                       else if (snapshot.hasData) {
-                        Map<String, dynamic> timings = snapshot.data!;
-                        if(searchCon.text == ''){
-                          return  Text(
-                            'ابحث عن مدينتك',
-                            style: TextStyle(
-                                fontSize: 24,
-                                fontFamily: 'Janna',
-                                color: white
-                            ),
-                          );
-                        }
-                        else{
-                          return Column(
-                            children: [
-                              Text(
-                                'مواقيت الصلاة بمدينة ${searchCon.text}',
-                                style: TextStyle(
-                                    fontSize: 24,
-                                    fontFamily: 'Janna',
-                                    color: white
-                                ),
+                        final timings = snapshot.data!;
+                        return Column(
+                          children: [
+                            Text(
+                              ' مواقيت الصلاة حسب مدينتك',
+                              style: TextStyle(
+                                  fontSize: 24,
+                                  fontFamily: 'Janna',
+                                  color: white
                               ),
-
-                              Expanded(
-                                child: ListView(
-                                  children: timings.entries.map((entry) {
-                                    String prayerName = prayerNamesInArabic[entry.key] ?? entry.key;
-                                    return Column(
-                                      children: [
-                                        Card(
-                                          color: gold,
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(12.0),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(prayerName,
-                                                  style: TextStyle(
-                                                      fontSize: 24,
-                                                      fontFamily: 'Janna',
-                                                      color: black
-                                                  ),
+                            ),
+                            Expanded(
+                              child: ListView(
+                                padding: EdgeInsets.zero,
+                                children: timings.entries.map((entry) {
+                                  String prayerName = prayerNamesInArabic[entry.key] ?? entry.key;
+                                  return Column(
+                                    children: [
+                                      Card(
+                                        color: gold,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(12.0),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(prayerName,
+                                                style: TextStyle(
+                                                    fontSize: 24,
+                                                    fontFamily: 'Janna',
+                                                    color: black
                                                 ),
-                                                Text(
-                                                  entry.value,
-                                                  style: TextStyle(
-                                                      fontSize: 24,
-                                                      fontFamily: 'Janna',
-                                                      color: black),
-                                                ),
-                                              ],
-                                            ),
+                                              ),
+                                              Text(
+                                                entry.value,
+                                                style: TextStyle(
+                                                    fontSize: 24,
+                                                    fontFamily: 'Janna',
+                                                    color: black),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                      ],
-                                    );
-                                  }).toList(),
-                                ),
+                                      ),
+                                    ],
+                                  );
+                                }).toList(),
                               ),
-                            ],
-                          );
-                        }
-
+                            ),
+                          ],
+                        );
                       }
                       else{
                         return Text('لا يوجد بيانات لعرضها',
